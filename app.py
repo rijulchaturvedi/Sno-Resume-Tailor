@@ -54,7 +54,7 @@ def tailor():
         for k in range(count):
             idx = section_indices[-count + k]
             clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "").strip()
-            doc.paragraphs[idx].text = "• " + clean_bullet
+            doc.paragraphs[idx].text = clean_bullet
             for run in doc.paragraphs[idx].runs:
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
@@ -68,6 +68,11 @@ def tailor():
             if skills not in para.text:
                 para.text = para.text.rstrip(" |") + " | " + skills
             break
+
+    # Remove any lingering "• " anywhere in doc
+    for para in doc.paragraphs:
+        if "• " in para.text:
+            para.text = para.text.replace("• ", "").strip()
 
     output = io.BytesIO()
     doc.save(output)
