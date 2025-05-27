@@ -68,7 +68,7 @@ def tailor():
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
             if skills not in para.text:
-                para.text = para.text.rstrip(" |") + " | " + skills
+                para.text = para.text.rstrip(" |") + ", " + skills
             break
 
     # Remove any lingering "• " anywhere in doc
