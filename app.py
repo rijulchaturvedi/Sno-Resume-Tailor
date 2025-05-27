@@ -23,15 +23,14 @@ def tailor():
 
     doc = Document("base_resume.docx")
 
-    def find_and_replace_bullets(company_name, role_title, new_bullets):
-        for i in range(len(doc.paragraphs)):
-            if company_name in doc.paragraphs[i].text.strip():
-                # Make sure this is the EXPERIENCE section, not EDUCATION
-                if "EXPERIENCE" not in doc.paragraphs[i - 1].text.upper():
-                    continue
-                # Now find the role title that follows this company header
-                for j in range(i + 1, len(doc.paragraphs)):
-                    if role_title in doc.paragraphs[j].text.strip():
+    def locate_and_replace(company, role, new_bullets):
+        for i in range(len(doc.paragraphs) - 1):
+            para_text = doc.paragraphs[i].text.strip().upper()
+            # Only proceed if this is in the EXPERIENCE section
+            if company in doc.paragraphs[i].text.strip() and i > 0 and "EXPERIENCE" in doc.paragraphs[i - 1].text.upper():
+                # Look for the role title immediately after
+                for j in range(i + 1, len(doc.paragraphs) - 1):
+                    if role.lower() in doc.paragraphs[j].text.strip().lower():
                         start = j + 1
                         end = start
                         while end < len(doc.paragraphs) and (
@@ -40,13 +39,13 @@ def tailor():
                             end += 1
                         for _ in range(end - start):
                             del doc.paragraphs[start]
-                        for k, bullet in enumerate(new_bullets):
-                            doc.paragraphs.insert(start + k, doc.add_paragraph(bullet))
+                        for b, bullet in enumerate(new_bullets):
+                            doc.paragraphs.insert(start + b, doc.add_paragraph(bullet))
                         return
 
-    find_and_replace_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", "Product Data Analyst - Research Assistant", experience[0:2])
-    find_and_replace_bullets("EXTUENT", "Product Manager", experience[2:5])
-    find_and_replace_bullets("FRAPPE", "Project Manager", experience[5:10])
+    locate_and_replace("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", "Product Data Analyst - Research Assistant", experience[0:2])
+    locate_and_replace("EXTUENT", "Product Manager", experience[2:5])
+    locate_and_replace("FRAPPE", "Project Manager", experience[5:10])
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
