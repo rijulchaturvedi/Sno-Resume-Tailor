@@ -1,13 +1,13 @@
 
-import openai
-import os
+from openai import OpenAI
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
 from datetime import datetime
 import io
 from docx import Document
+import os
 
-openai.api_key = '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'
+client = OpenAI(api_key="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")
 
 app = Flask(__name__)
 CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
@@ -17,9 +17,7 @@ def customize():
     data = request.get_json()
     job_desc = data.get("jobDesc", "")
 
-    # Static base experience and skills
-    base_experience = """
-UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN
+    base_experience = """UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN
 Product Data Analyst - Research Assistant (Mar 2024 – Aug 2024)
 - Launching an AI-based product with OSF Healthcare and University of Illinois to optimize rural healthcare allocation.
 - Managed extensive zip-code level open-access healthcare data using G-Suite to enhance service accessibility.
@@ -41,8 +39,7 @@ Project Manager (Oct 2020 – Jan 2023)
 
     skills = "R | SQL | Python | Excel | PowerBI | Google Analytics | JIRA | Copilot Studio | MIRO | Figma | GitHub | product strategy | data analysis | GTM strategy | cross-functional collaboration"
 
-    prompt = f"""
-You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
+    prompt = f"""You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
 - Do not change the core content, but rewrite the bullets to match the tone, technologies, and priorities of the job.
 - Include quantifiable metrics if available.
 - Return exactly 10 bullets: 2 for UNIVERSITY OF ILLINOIS, 3 for EXTUENT, 5 for FRAPPE.
@@ -78,7 +75,7 @@ JOB DESCRIPTION:
 {job_desc}
 """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{ "role": "user", "content": prompt }]
     )
@@ -89,7 +86,6 @@ JOB DESCRIPTION:
 
     doc = Document("base_resume.docx")
 
-    # Track when we're in the EXPERIENCE section
     in_experience = False
     section_titles = {
         "UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN": 2,
@@ -97,7 +93,6 @@ JOB DESCRIPTION:
         "FRAPPE": 5
     }
 
-    # Replace bullets under experience only
     i = 0
     while i < len(doc.paragraphs):
         para = doc.paragraphs[i]
@@ -111,11 +106,10 @@ JOB DESCRIPTION:
                 if title in para.text:
                     for j in range(count):
                         doc.paragraphs[i + j + 1].text = experience[:count][j]
-                    experience = experience[count:]  # remove used bullets
+                    experience = experience[count:]
                     i += count
         i += 1
 
-    # Update skills section
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
             para.text = para.text.split("|")[0] + "| " + updated_skills
