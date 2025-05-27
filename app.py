@@ -8,9 +8,9 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/customize": {"origins": "*"}})
+CORS(app, resources={r"/tailor": {"origins": "chrome-extension://*"}})
 
-@app.route('/customize', methods=['POST', 'OPTIONS'])
+@app.route('/tailor', methods=['POST', 'OPTIONS'])
 def tailor_resume():
     origin = request.headers.get("Origin", "*")
 
@@ -27,13 +27,25 @@ def tailor_resume():
 
     doc = Document("base_resume.docx")
 
-    def replace_last_n_paragraphs(section_title, new_bullets, count):
-        found_index = None
+    def find_experience_paragraph_index(doc, section_title):
+        start = None
+        end = None
+
         for i, para in enumerate(doc.paragraphs):
-            if section_title in para.text:
-                found_index = i
+            if "EXPERIENCE" in para.text.upper():
+                start = i
+            elif "EDUCATION" in para.text.upper() and start is not None:
+                end = i
                 break
 
+        if start is not None and end is not None:
+            for i in range(start, end):
+                if section_title in doc.paragraphs[i].text:
+                    return i
+        return None
+
+    def replace_last_n_paragraphs(section_title, new_bullets, count):
+        found_index = find_experience_paragraph_index(doc, section_title)
         if found_index is None:
             print(f"❌ Section '{section_title}' not found.")
             return
@@ -52,15 +64,16 @@ def tailor_resume():
 
         for k in range(count):
             idx = section_indices[-count + k]
-            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "•").strip()
+            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "\u2022").strip()
             doc.paragraphs[idx].text = clean_bullet
             for run in doc.paragraphs[idx].runs:
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
 
+    # Correct 10-bullet layout for Vrinda
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
-    replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
+    replace_last_n_paragraphs("FRAPPE TECHNOLOGIES PRIVATE LIMITED", experience[5:10], 5)
 
     for i, para in enumerate(doc.paragraphs):
         if "Core Competencies" in para.text:
