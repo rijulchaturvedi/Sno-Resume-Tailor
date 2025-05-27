@@ -65,7 +65,7 @@ def tailor_resume():
 
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
-    replace_last_n_paragraphs("FRAPPE TECHNOLOGIES PRIVATE LIMITED", experience[5:10], 5)
+    replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
 
     for i, para in enumerate(doc.paragraphs):
         if "Core Competencies" in para.text:
