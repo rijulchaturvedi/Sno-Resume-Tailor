@@ -4,6 +4,7 @@ from flask_cors import CORS
 from datetime import datetime
 import io
 from docx import Document
+from docx.shared import Pt
 
 app = Flask(__name__)
 CORS(app, origins=["chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"])
@@ -23,29 +24,45 @@ def tailor():
 
     doc = Document("base_resume.docx")
 
-    def clean(text):
-        return text.strip().lower().replace("\t", " ").replace("|", " ").replace("-", " ").replace("–", " ")
+    def replace_last_n_paragraphs(section_title, new_bullets, count, must_be_under=None):
+        found_index = None
+        for i, para in enumerate(doc.paragraphs):
+            if section_title in para.text:
+                if must_be_under:
+                    # Check 3 lines back for context header
+                    context = [doc.paragraphs[j].text.strip().upper() for j in range(max(0, i - 3), i)]
+                    if not any(must_be_under in line for line in context):
+                        continue
+                found_index = i
+                break
 
-    def locate_role(company, role, bullets):
-        for i in range(len(doc.paragraphs) - 1):
-            if company.lower() in clean(doc.paragraphs[i].text) and i > 0 and "experience" in doc.paragraphs[i - 1].text.lower():
-                for j in range(i + 1, len(doc.paragraphs)):
-                    if role.lower() in clean(doc.paragraphs[j].text):
-                        start = j + 1
-                        end = start
-                        while end < len(doc.paragraphs) and (
-                            doc.paragraphs[end].text.strip().startswith("•") or doc.paragraphs[end].text.strip() == ""
-                        ):
-                            end += 1
-                        for _ in range(end - start):
-                            del doc.paragraphs[start]
-                        for k, b in enumerate(bullets):
-                            doc.paragraphs.insert(start + k, doc.add_paragraph(b))
-                        return
+        if found_index is None:
+            print(f"❌ Section '{section_title}' not found.")
+            return
 
-    locate_role("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", "Product Data Analyst", experience[0:2])
-    locate_role("EXTUENT", "Product Manager", experience[2:5])
-    locate_role("FRAPPE", "Project Manager", experience[5:10])
+        section_indices = []
+        for j in range(found_index + 1, len(doc.paragraphs)):
+            text = doc.paragraphs[j].text.strip()
+            if len(text) > 0 and text.isupper():
+                break
+            if text:
+                section_indices.append(j)
+
+        if len(section_indices) < count:
+            print(f"⚠️ Not enough paragraphs to replace under '{section_title}'.")
+            return
+
+        for k in range(count):
+            idx = section_indices[-count + k]
+            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "•").strip()
+            doc.paragraphs[idx].text = clean_bullet
+            for run in doc.paragraphs[idx].runs:
+                run.font.size = Pt(10.5)
+                run.font.name = "Times New Roman"
+
+    replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2, must_be_under="EXPERIENCE")
+    replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
+    replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
