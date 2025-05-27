@@ -8,10 +8,10 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/tailor": {"origins": "chrome-extension://*"}})
+CORS(app, resources={r"/customize": {"origins": "chrome-extension://*"}})
 
-@app.route('/tailor', methods=['POST', 'OPTIONS'])
-def tailor_resume():
+@app.route('/customize', methods=['POST', 'OPTIONS'])
+def customize_resume():
     origin = request.headers.get("Origin", "*")
 
     if request.method == "OPTIONS":
@@ -58,6 +58,7 @@ def tailor_resume():
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
 
+    # Vrinda's 10-bullet mapping
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
     replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
@@ -71,7 +72,7 @@ def tailor_resume():
     doc.save(output)
     output.seek(0)
 
-    filename = "Vrinda Menon Resume - " + datetime.now().strftime("%Y-%m-%d") + ".docx" + datetime.now().strftime('%Y-%m-%d') + ".docx"
+    filename = "Vrinda Menon Resume - " + datetime.now().strftime('%Y-%m-%d') + ".docx"
 
     response = make_response(send_file(
         output,
@@ -86,4 +87,3 @@ def tailor_resume():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
-
