@@ -6,19 +6,16 @@ import io
 from docx import Document
 
 app = Flask(__name__)
-CORS(app, resources={r"/customize": {"origins": "chrome-extension://*"}})
+CORS(app, origins=["chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"])
 
-@app.route('/customize', methods=['POST', 'OPTIONS'])
-def tailor_resume():
-    origin = request.headers.get("Origin", "*")
-
+@app.route("/tailor", methods=["POST", "OPTIONS"])
+def tailor():
     if request.method == "OPTIONS":
         response = make_response()
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
         response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         return response
-
 
     data = request.get_json()
     experience = data.get("experience", [])
@@ -30,7 +27,9 @@ def tailor_resume():
         for i in range(len(doc.paragraphs)):
             if section_title in doc.paragraphs[i].text:
                 j = i + 1
-                while j < len(doc.paragraphs) and (doc.paragraphs[j].text.strip().startswith("•") or doc.paragraphs[j].text.strip() == ""):
+                while j < len(doc.paragraphs) and (
+                    doc.paragraphs[j].text.strip().startswith("•") or doc.paragraphs[j].text.strip() == ""
+                ):
                     del doc.paragraphs[j]
                 for idx, bullet in enumerate(new_bullets):
                     doc.paragraphs.insert(j + idx, doc.add_paragraph(bullet))
@@ -51,7 +50,7 @@ def tailor_resume():
 
     filename = "Vrinda Menon Resume - " + datetime.now().strftime("%Y-%m-%d") + ".docx"
     response = make_response(send_file(output, as_attachment=True, download_name=filename))
-    response.headers["Access-Control-Allow-Origin"] = "chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"
+    response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
