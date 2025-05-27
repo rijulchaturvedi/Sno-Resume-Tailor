@@ -1,90 +1,109 @@
 
+import openai
+import os
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
-from docx import Document
-from docx.shared import Pt
-import io
-import os
 from datetime import datetime
+import io
+from docx import Document
+
+openai.api_key = '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'
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
+CORS(app)
 
-@app.route('/customize', methods=['POST', 'OPTIONS'])
-def tailor_resume():
-    origin = request.headers.get("Origin", "*")
+@app.route("/customize", methods=["POST"])
+def customize():
+    data = request.get_json()
+    job_desc = data.get("jobDesc", "")
 
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        return response
+    prompt = f"""
+You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
+- Do not change the core content, but rewrite the bullets to match the tone, technologies, and priorities of the job.
+- Include quantifiable metrics if available.
+- Return exactly 10 bullets: 2 for UNIVERSITY OF ILLINOIS, 3 for EXTUENT, 5 for FRAPPE.
+- Do not use company names in the bullet openings.
 
-    data = request.json
-    experience = data.get("experience", [])
-    skills = data.get("skills", "")
+Return this JSON exactly:
+
+{{
+  "experience": [
+    "• Bullet 1",
+    "• Bullet 2",
+    "• Bullet 3",
+    "• Bullet 4",
+    "• Bullet 5",
+    "• Bullet 6",
+    "• Bullet 7",
+    "• Bullet 8",
+    "• Bullet 9",
+    "• Bullet 10"
+  ],
+  "skills": "Skill1 | Skill2 | Skill3 | ..."
+}}
+
+Only return valid JSON. Do not explain, apologize, or use markdown.
+
+Base EXPERIENCE:
+UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN
+Product Data Analyst - Research Assistant (Mar 2024 – Aug 2024)
+- Launching an AI-based product with OSF Healthcare and University of Illinois to optimize rural healthcare allocation.
+- Managed extensive zip-code level open-access healthcare data using G-Suite to enhance service accessibility.
+
+EXTUENT
+Product Manager (Mar 2023 – Aug 2023)
+- Drove UX improvement across ERP lifecycle using ERPNext, boosting productivity by 15% and reducing process time by 20%.
+- Led 5 enterprise implementations with KPI-focused roadmaps, increasing client satisfaction by 15% and loyalty rates.
+- Reduced service disruptions by 25% and downtime by 30% through stakeholder engagement and issue root cause discovery.
+
+FRAPPE
+Project Manager (Oct 2020 – Jan 2023)
+- Delivered 30+ ERP projects 20% ahead of schedule across retail and manufacturing, optimizing order processing systems.
+- Increased project efficiency by 20% through Agile and JIRA, and achieved 95% on-time delivery rate.
+- Boosted client satisfaction by 20% via data-driven decisions and Qualtrics-based feedback collection.
+- Reduced support tickets by 25% through clear documentation, blogs, and help articles on Notion and ERPNext.
+- Executed API integrations and cloud migration across 4 full-lifecycle projects using Waterfall methodology.
+
+JOB DESCRIPTION:
+{job_desc}
+"""
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            { "role": "user", "content": prompt }
+        ]
+    )
+
+    parsed = eval(response.choices[0].message.content)
 
     doc = Document("base_resume.docx")
+    experience = parsed["experience"]
+    skills = parsed["skills"]
 
-    def replace_last_n_paragraphs(section_title, new_bullets, count):
-        # Only allow replacement if the section comes after the EXPERIENCE header
-        experience_index = None
-        found_index = None
-
-        for i, para in enumerate(doc.paragraphs):
-            if "EXPERIENCE" in para.text.upper():
-                experience_index = i
-            if section_title in para.text and experience_index is not None and i > experience_index:
-                found_index = i
+    def replace_last_n_paragraphs(section_title, new_bullets, n):
+        for i in range(len(doc.paragraphs)-1, -1, -1):
+            if section_title in doc.paragraphs[i].text:
+                for j in range(n):
+                    doc.paragraphs[i + 1 + j].text = new_bullets[j]
                 break
-
-        if found_index is None:
-            print(f"❌ Section '{section_title}' not found after EXPERIENCE.")
-            return
-
-        section_indices = []
-        for j in range(found_index + 1, len(doc.paragraphs)):
-            text = doc.paragraphs[j].text.strip()
-            if len(text) > 0 and text.isupper():
-                break
-            if text:
-                section_indices.append(j)
-
-        if len(section_indices) < count:
-            print(f"⚠️ Not enough paragraphs to replace under '{section_title}'. Found {len(section_indices)}, expected {count}.")
-            return
-
-        for k in range(count):
-            idx = section_indices[-count + k]
-            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "\u2022").strip()
-            doc.paragraphs[idx].text = clean_bullet
-            for run in doc.paragraphs[idx].runs:
-                run.font.size = Pt(10.5)
-                run.font.name = "Times New Roman"
 
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
     replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
 
-    for i, para in enumerate(doc.paragraphs):
+    for para in doc.paragraphs:
         if "Core Competencies" in para.text:
-            para.text += " | " + skills
+            para.text = para.text.split("|")[0] + "| " + skills
             break
 
     output = io.BytesIO()
     doc.save(output)
     output.seek(0)
 
-    filename = "Vrinda Menon Resume - " + datetime.now().strftime('%Y-%m-%d') + ".docx"
-
-    response = make_response(send_file(
-        output,
-        as_attachment=True,
-        download_name=filename
-    ))
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    filename = "Vrinda Menon Resume - " + datetime.now().strftime("%Y-%m-%d") + ".docx"
+    response = make_response(send_file(output, as_attachment=True, download_name=filename))
+    response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
