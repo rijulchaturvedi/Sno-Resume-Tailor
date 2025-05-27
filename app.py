@@ -7,13 +7,13 @@ from docx import Document
 from docx.shared import Pt
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"])
+CORS(app, origins=["*"])
 
 @app.route("/tailor", methods=["POST", "OPTIONS"])
 def tailor():
     if request.method == "OPTIONS":
         response = make_response()
-        response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
+        response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         return response
@@ -84,7 +84,7 @@ def tailor():
 
     filename = "Vrinda Menon Resume - " + datetime.now().strftime("%Y-%m-%d") + ".docx"
     response = make_response(send_file(output, as_attachment=True, download_name=filename))
-    response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
+    response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
