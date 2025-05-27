@@ -7,7 +7,8 @@ from docx import Document
 from docx.shared import Pt
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"])
+# CORS(app, origins=["chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"])
+CORS(app, origins=["*"])
 
 @app.route("/tailor", methods=["POST", "OPTIONS"])
 def tailor():
