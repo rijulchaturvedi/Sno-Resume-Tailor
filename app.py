@@ -29,7 +29,6 @@ def tailor():
         for i, para in enumerate(doc.paragraphs):
             if section_title in para.text:
                 if must_be_under:
-                    # Check 3 lines back for context header
                     context = [doc.paragraphs[j].text.strip().upper() for j in range(max(0, i - 3), i)]
                     if not any(must_be_under in line for line in context):
                         continue
@@ -54,8 +53,8 @@ def tailor():
 
         for k in range(count):
             idx = section_indices[-count + k]
-            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "•").strip()
-            doc.paragraphs[idx].text = clean_bullet
+            clean_bullet = new_bullets[k].replace("â€¢", "").replace("•", "").strip()
+            doc.paragraphs[idx].text = "• " + clean_bullet
             for run in doc.paragraphs[idx].runs:
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
@@ -66,7 +65,8 @@ def tailor():
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
-            para.text = "Core Competencies - " + skills
+            if skills not in para.text:
+                para.text = para.text.rstrip(" |") + " | " + skills
             break
 
     output = io.BytesIO()
