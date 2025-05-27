@@ -1,5 +1,5 @@
 
-import openai
+from openai import OpenAI
 import os
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
@@ -7,7 +7,7 @@ from datetime import datetime
 import io
 from docx import Document
 
-openai.api_key = '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'
+client = OpenAI(api_key='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')
 
 app = Flask(__name__)
 CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
@@ -17,8 +17,7 @@ def customize():
     data = request.get_json()
     job_desc = data.get("jobDesc", "")
 
-    prompt = f"""
-You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
+    prompt = f"""You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
 - Do not change the core content, but rewrite the bullets to match the tone, technologies, and priorities of the job.
 - Include quantifiable metrics if available.
 - Return exactly 10 bullets: 2 for UNIVERSITY OF ILLINOIS, 3 for EXTUENT, 5 for FRAPPE.
@@ -68,7 +67,7 @@ JOB DESCRIPTION:
 {job_desc}
 """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             { "role": "user", "content": prompt }
@@ -84,11 +83,10 @@ JOB DESCRIPTION:
     def replace_paragraphs(section_title, new_bullets, n):
         for i in range(len(doc.paragraphs)-1, -1, -1):
             if section_title in doc.paragraphs[i].text:
-                # Delete the next n paragraphs (old bullets)
+                # Remove next n paragraphs
                 for _ in range(n):
                     if i + 1 < len(doc.paragraphs):
                         del doc.paragraphs[i + 1]
-                # Insert new ones
                 for j in range(n):
                     doc.paragraphs.insert(i + 1 + j, doc.add_paragraph(new_bullets[j]))
                 break
