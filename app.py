@@ -10,7 +10,7 @@ from docx import Document
 openai.api_key = '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'
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
 
 @app.route("/customize", methods=["POST"])
 def customize():
