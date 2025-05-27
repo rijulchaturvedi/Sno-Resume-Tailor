@@ -72,16 +72,16 @@ def tailor():
     #         break
 
     for para in doc.paragraphs:
-    if "Core Competencies" in para.text:
-        try:
-            existing_text = para.text.split("Core Competencies -")[-1]
-            existing_skills = [s.strip() for s in existing_text.split(",") if s.strip()]
-            new_skills = [s.strip() for s in skills.split(",") if s.strip()]
-            merged = sorted(set(existing_skills + new_skills), key=lambda x: existing_skills.index(x) if x in existing_skills else len(existing_skills))
-            para.text = "Core Competencies - " + ", ".join(merged)
-        except Exception as e:
-            print(f"⚠️ Failed to parse skills: {e}")
-        break
+        if "Core Competencies" in para.text:
+            try:
+                existing_text = para.text.split("Core Competencies -")[-1]
+                existing_skills = [s.strip() for s in existing_text.split(",") if s.strip()]
+                new_skills = [s.strip() for s in skills.split(",") if s.strip()]
+                merged = sorted(set(existing_skills + new_skills), key=lambda x: existing_skills.index(x) if x in existing_skills else len(existing_skills))
+                para.text = "Core Competencies - " + ", ".join(merged)
+            except Exception as e:
+                print(f"⚠️ Failed to parse skills: {e}")
+            break
 
     # Remove any lingering "• " anywhere in doc
     for para in doc.paragraphs:
