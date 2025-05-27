@@ -65,11 +65,23 @@ def tailor():
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
     replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
 
+    # for para in doc.paragraphs:
+    #     if "Core Competencies" in para.text:
+    #         if skills not in para.text:
+    #             para.text = para.text.rstrip(" | ") + ", " + skills
+    #         break
+
     for para in doc.paragraphs:
-        if "Core Competencies" in para.text:
-            if skills not in para.text:
-                para.text = para.text.rstrip(" | ") + ", " + skills
-            break
+    if "Core Competencies" in para.text:
+        try:
+            existing_text = para.text.split("Core Competencies -")[-1]
+            existing_skills = [s.strip() for s in existing_text.split(",") if s.strip()]
+            new_skills = [s.strip() for s in skills.split(",") if s.strip()]
+            merged = sorted(set(existing_skills + new_skills), key=lambda x: existing_skills.index(x) if x in existing_skills else len(existing_skills))
+            para.text = "Core Competencies - " + ", ".join(merged)
+        except Exception as e:
+            print(f"⚠️ Failed to parse skills: {e}")
+        break
 
     # Remove any lingering "• " anywhere in doc
     for para in doc.paragraphs:
