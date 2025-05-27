@@ -1,4 +1,3 @@
-
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
 from datetime import datetime
@@ -65,11 +64,20 @@ def tailor():
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
-            if skills not in para.text:
-                para.text = para.text.rstrip(" |") + " | " + skills
+            try:
+                existing_text = para.text.split("Core Competencies -")[-1]
+                existing_skills = [s.strip() for s in existing_text.split(",") if s.strip()]
+                new_skills = [s.strip() for s in skills.split(",") if s.strip()]
+                merged = sorted(set(existing_skills + new_skills), key=lambda x: existing_skills.index(x) if x in existing_skills else len(existing_skills))
+
+                para.clear()
+                run = para.add_run("Core Competencies - " + ", ".join(merged))
+                run.font.size = Pt(10.5)
+                run.font.name = "Times New Roman"
+            except Exception as e:
+                print(f"⚠️ Failed to parse skills: {e}")
             break
 
-    # Remove any lingering "• " anywhere in doc
     for para in doc.paragraphs:
         if "• " in para.text:
             para.text = para.text.replace("• ", "").strip()
