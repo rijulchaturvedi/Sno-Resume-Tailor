@@ -23,22 +23,28 @@ def tailor():
 
     doc = Document("base_resume.docx")
 
-    def replace_bullets(section_title, new_bullets):
+    def clear_and_insert_bullets(section_title, new_bullets):
         for i in range(len(doc.paragraphs)):
             if section_title in doc.paragraphs[i].text:
-                j = i + 1
-                while j < len(doc.paragraphs) and (
-                    doc.paragraphs[j].text.strip().startswith("•") or doc.paragraphs[j].text.strip() == ""
+                start = i + 1
+                end = start
+                # Delete old bullets under this section
+                while end < len(doc.paragraphs) and (
+                    doc.paragraphs[end].text.strip().startswith("•") or doc.paragraphs[end].text.strip() == ""
                 ):
-                    del doc.paragraphs[j]
-                for idx, bullet in enumerate(new_bullets):
-                    doc.paragraphs.insert(j + idx, doc.add_paragraph(bullet))
+                    end += 1
+                for _ in range(end - start):
+                    del doc.paragraphs[start]
+                # Insert new ones
+                for j, bullet in enumerate(new_bullets):
+                    doc.paragraphs.insert(start + j, doc.add_paragraph(bullet))
                 break
 
-    replace_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2])
-    replace_bullets("EXTUENT", experience[2:5])
-    replace_bullets("FRAPPE", experience[5:10])
+    clear_and_insert_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2])
+    clear_and_insert_bullets("EXTUENT", experience[2:5])
+    clear_and_insert_bullets("FRAPPE", experience[5:10])
 
+    # Replace skills line cleanly
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
             para.text = "Core Competencies - " + skills
