@@ -1,45 +1,24 @@
 
-from openai import OpenAI
+import openai
+import os
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
 from datetime import datetime
 import io
 from docx import Document
-import os
 
-client = OpenAI(api_key="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")
+openai.api_key = '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'
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
+CORS(app)
 
 @app.route("/customize", methods=["POST"])
 def customize():
     data = request.get_json()
     job_desc = data.get("jobDesc", "")
 
-    base_experience = """UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN
-Product Data Analyst - Research Assistant (Mar 2024 – Aug 2024)
-- Launching an AI-based product with OSF Healthcare and University of Illinois to optimize rural healthcare allocation.
-- Managed extensive zip-code level open-access healthcare data using G-Suite to enhance service accessibility.
-
-EXTUENT
-Product Manager (Mar 2023 – Aug 2023)
-- Drove UX improvement across ERP lifecycle using ERPNext, boosting productivity by 15% and reducing process time by 20%.
-- Led 5 enterprise implementations with KPI-focused roadmaps, increasing client satisfaction by 15% and loyalty rates.
-- Reduced service disruptions by 25% and downtime by 30% through stakeholder engagement and issue root cause discovery.
-
-FRAPPE
-Project Manager (Oct 2020 – Jan 2023)
-- Delivered 30+ ERP projects 20% ahead of schedule across retail and manufacturing, optimizing order processing systems.
-- Increased project efficiency by 20% through Agile and JIRA, and achieved 95% on-time delivery rate.
-- Boosted client satisfaction by 20% via data-driven decisions and Qualtrics-based feedback collection.
-- Reduced support tickets by 25% through clear documentation, blogs, and help articles on Notion and ERPNext.
-- Executed API integrations and cloud migration across 4 full-lifecycle projects using Waterfall methodology.
-"""
-
-    skills = "R | SQL | Python | Excel | PowerBI | Google Analytics | JIRA | Copilot Studio | MIRO | Figma | GitHub | product strategy | data analysis | GTM strategy | cross-functional collaboration"
-
-    prompt = f"""You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
+    prompt = f"""
+You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
 - Do not change the core content, but rewrite the bullets to match the tone, technologies, and priorities of the job.
 - Include quantifiable metrics if available.
 - Return exactly 10 bullets: 2 for UNIVERSITY OF ILLINOIS, 3 for EXTUENT, 5 for FRAPPE.
@@ -66,53 +45,61 @@ Return this JSON exactly:
 Only return valid JSON. Do not explain, apologize, or use markdown.
 
 Base EXPERIENCE:
-{base_experience}
+UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN
+Product Data Analyst - Research Assistant (Mar 2024 – Aug 2024)
+- Launching an AI-based product with OSF Healthcare and University of Illinois to optimize rural healthcare allocation.
+- Managed extensive zip-code level open-access healthcare data using G-Suite to enhance service accessibility.
 
-SKILLS:
-{skills}
+EXTUENT
+Product Manager (Mar 2023 – Aug 2023)
+- Drove UX improvement across ERP lifecycle using ERPNext, boosting productivity by 15% and reducing process time by 20%.
+- Led 5 enterprise implementations with KPI-focused roadmaps, increasing client satisfaction by 15% and loyalty rates.
+- Reduced service disruptions by 25% and downtime by 30% through stakeholder engagement and issue root cause discovery.
+
+FRAPPE
+Project Manager (Oct 2020 – Jan 2023)
+- Delivered 30+ ERP projects 20% ahead of schedule across retail and manufacturing, optimizing order processing systems.
+- Increased project efficiency by 20% through Agile and JIRA, and achieved 95% on-time delivery rate.
+- Boosted client satisfaction by 20% via data-driven decisions and Qualtrics-based feedback collection.
+- Reduced support tickets by 25% through clear documentation, blogs, and help articles on Notion and ERPNext.
+- Executed API integrations and cloud migration across 4 full-lifecycle projects using Waterfall methodology.
 
 JOB DESCRIPTION:
 {job_desc}
 """
 
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[{ "role": "user", "content": prompt }]
+        messages=[
+            { "role": "user", "content": prompt }
+        ]
     )
 
     parsed = eval(response.choices[0].message.content)
-    experience = parsed["experience"]
-    updated_skills = parsed["skills"]
 
     doc = Document("base_resume.docx")
+    experience = parsed["experience"]
+    skills = parsed["skills"]
 
-    in_experience = False
-    section_titles = {
-        "UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN": 2,
-        "EXTUENT": 3,
-        "FRAPPE": 5
-    }
+    def replace_paragraphs(section_title, new_bullets, n):
+        for i in range(len(doc.paragraphs)-1, -1, -1):
+            if section_title in doc.paragraphs[i].text:
+                # Delete the next n paragraphs (old bullets)
+                for _ in range(n):
+                    if i + 1 < len(doc.paragraphs):
+                        del doc.paragraphs[i + 1]
+                # Insert new ones
+                for j in range(n):
+                    doc.paragraphs.insert(i + 1 + j, doc.add_paragraph(new_bullets[j]))
+                break
 
-    i = 0
-    while i < len(doc.paragraphs):
-        para = doc.paragraphs[i]
-        if "EXPERIENCE" in para.text.upper():
-            in_experience = True
-        if "EDUCATION" in para.text.upper():
-            in_experience = False
-
-        if in_experience:
-            for title, count in section_titles.items():
-                if title in para.text:
-                    for j in range(count):
-                        doc.paragraphs[i + j + 1].text = experience[:count][j]
-                    experience = experience[count:]
-                    i += count
-        i += 1
+    replace_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
+    replace_paragraphs("EXTUENT", experience[2:5], 3)
+    replace_paragraphs("FRAPPE", experience[5:10], 5)
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
-            para.text = para.text.split("|")[0] + "| " + updated_skills
+            para.text = "Core Competencies - " + skills
             break
 
     output = io.BytesIO()
@@ -126,4 +113,5 @@ JOB DESCRIPTION:
     return response
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
