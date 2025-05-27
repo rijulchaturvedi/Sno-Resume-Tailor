@@ -8,10 +8,10 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/customize": {"origins": "chrome-extension://*"}})
+CORS(app, resources={r"/customize": {"origins": "*"}})
 
 @app.route('/customize', methods=['POST', 'OPTIONS'])
-def customize_resume():
+def tailor_resume():
     origin = request.headers.get("Origin", "*")
 
     if request.method == "OPTIONS":
@@ -58,7 +58,6 @@ def customize_resume():
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
 
-    # Vrinda's 10-bullet mapping
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
     replace_last_n_paragraphs("FRAPPE", experience[5:10], 5)
