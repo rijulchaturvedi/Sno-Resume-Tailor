@@ -8,9 +8,9 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/tailor": {"origins": "chrome-extension://*"}})
+CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
 
-@app.route('/tailor', methods=['POST', 'OPTIONS'])
+@app.route('/customize', methods=['POST', 'OPTIONS'])
 def tailor_resume():
     origin = request.headers.get("Origin", "*")
 
@@ -27,27 +27,20 @@ def tailor_resume():
 
     doc = Document("base_resume.docx")
 
-    def find_experience_paragraph_index(doc, section_title):
-        start = None
-        end = None
+    def replace_last_n_paragraphs(section_title, new_bullets, count):
+        # Only allow replacement if the section comes after the EXPERIENCE header
+        experience_index = None
+        found_index = None
 
         for i, para in enumerate(doc.paragraphs):
             if "EXPERIENCE" in para.text.upper():
-                start = i
-            elif "EDUCATION" in para.text.upper() and start is not None:
-                end = i
+                experience_index = i
+            if section_title in para.text and experience_index is not None and i > experience_index:
+                found_index = i
                 break
 
-        if start is not None and end is not None:
-            for i in range(start, end):
-                if section_title in doc.paragraphs[i].text:
-                    return i
-        return None
-
-    def replace_last_n_paragraphs(section_title, new_bullets, count):
-        found_index = find_experience_paragraph_index(doc, section_title)
         if found_index is None:
-            print(f"❌ Section '{section_title}' not found.")
+            print(f"❌ Section '{section_title}' not found after EXPERIENCE.")
             return
 
         section_indices = []
@@ -59,7 +52,7 @@ def tailor_resume():
                 section_indices.append(j)
 
         if len(section_indices) < count:
-            print(f"⚠️ Not enough paragraphs to replace under '{section_title}'.")
+            print(f"⚠️ Not enough paragraphs to replace under '{section_title}'. Found {len(section_indices)}, expected {count}.")
             return
 
         for k in range(count):
@@ -70,7 +63,6 @@ def tailor_resume():
                 run.font.size = Pt(10.5)
                 run.font.name = "Times New Roman"
 
-    # Correct 10-bullet layout for Vrinda
     replace_last_n_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
     replace_last_n_paragraphs("EXTUENT", experience[2:5], 3)
     replace_last_n_paragraphs("FRAPPE TECHNOLOGIES PRIVATE LIMITED", experience[5:10], 5)
