@@ -23,28 +23,31 @@ def tailor():
 
     doc = Document("base_resume.docx")
 
-    def clear_and_insert_bullets(section_title, new_bullets):
+    def find_and_replace_bullets(company_name, role_title, new_bullets):
         for i in range(len(doc.paragraphs)):
-            if section_title in doc.paragraphs[i].text:
-                start = i + 1
-                end = start
-                # Delete old bullets under this section
-                while end < len(doc.paragraphs) and (
-                    doc.paragraphs[end].text.strip().startswith("•") or doc.paragraphs[end].text.strip() == ""
-                ):
-                    end += 1
-                for _ in range(end - start):
-                    del doc.paragraphs[start]
-                # Insert new ones
-                for j, bullet in enumerate(new_bullets):
-                    doc.paragraphs.insert(start + j, doc.add_paragraph(bullet))
-                break
+            if company_name in doc.paragraphs[i].text.strip():
+                # Make sure this is the EXPERIENCE section, not EDUCATION
+                if "EXPERIENCE" not in doc.paragraphs[i - 1].text.upper():
+                    continue
+                # Now find the role title that follows this company header
+                for j in range(i + 1, len(doc.paragraphs)):
+                    if role_title in doc.paragraphs[j].text.strip():
+                        start = j + 1
+                        end = start
+                        while end < len(doc.paragraphs) and (
+                            doc.paragraphs[end].text.strip().startswith("•") or doc.paragraphs[end].text.strip() == ""
+                        ):
+                            end += 1
+                        for _ in range(end - start):
+                            del doc.paragraphs[start]
+                        for k, bullet in enumerate(new_bullets):
+                            doc.paragraphs.insert(start + k, doc.add_paragraph(bullet))
+                        return
 
-    clear_and_insert_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2])
-    clear_and_insert_bullets("EXTUENT", experience[2:5])
-    clear_and_insert_bullets("FRAPPE", experience[5:10])
+    find_and_replace_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", "Product Data Analyst - Research Assistant", experience[0:2])
+    find_and_replace_bullets("EXTUENT", "Product Manager", experience[2:5])
+    find_and_replace_bullets("FRAPPE", "Project Manager", experience[5:10])
 
-    # Replace skills line cleanly
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
             para.text = "Core Competencies - " + skills
