@@ -82,7 +82,8 @@ def tailor():
 
     filename = "Vrinda Menon Resume - " + datetime.now().strftime("%Y-%m-%d") + ".docx"
     response = make_response(send_file(output, as_attachment=True, download_name=filename))
-    response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
+    # response.headers["Access-Control-Allow-Origin"] = "chrome-extension://eejggmapnjhejendenjgekfeacdgcmki"
+    response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
