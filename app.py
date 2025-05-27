@@ -1,5 +1,5 @@
 
-from openai import OpenAI
+import openai
 import os
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
@@ -7,7 +7,7 @@ from datetime import datetime
 import io
 from docx import Document
 
-client = OpenAI(api_key='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')
+openai.api_key = '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'
 
 app = Flask(__name__)
 CORS(app, origins=["chrome-extension://gbbfcbcjpdlabjfeccljliaedcpfnnpg"])
@@ -17,7 +17,8 @@ def customize():
     data = request.get_json()
     job_desc = data.get("jobDesc", "")
 
-    prompt = f"""You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
+    prompt = f"""
+You are a resume optimization assistant. Tailor the following resume bullets to match the job description below.
 - Do not change the core content, but rewrite the bullets to match the tone, technologies, and priorities of the job.
 - Include quantifiable metrics if available.
 - Return exactly 10 bullets: 2 for UNIVERSITY OF ILLINOIS, 3 for EXTUENT, 5 for FRAPPE.
@@ -67,33 +68,32 @@ JOB DESCRIPTION:
 {job_desc}
 """
 
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[
-            { "role": "user", "content": prompt }
-        ]
+        messages=[{ "role": "user", "content": prompt }]
     )
 
     parsed = eval(response.choices[0].message.content)
-
-    doc = Document("base_resume.docx")
     experience = parsed["experience"]
     skills = parsed["skills"]
 
-    def replace_paragraphs(section_title, new_bullets, n):
-        for i in range(len(doc.paragraphs)-1, -1, -1):
+    doc = Document("base_resume.docx")
+
+    def replace_bullets(section_title, new_bullets):
+        for i in range(len(doc.paragraphs)):
             if section_title in doc.paragraphs[i].text:
-                # Remove next n paragraphs
-                for _ in range(n):
-                    if i + 1 < len(doc.paragraphs):
-                        del doc.paragraphs[i + 1]
-                for j in range(n):
-                    doc.paragraphs.insert(i + 1 + j, doc.add_paragraph(new_bullets[j]))
+                # Remove all bullet-style paragraphs directly after the section title
+                j = i + 1
+                while j < len(doc.paragraphs) and (doc.paragraphs[j].text.strip().startswith("•") or doc.paragraphs[j].text.strip() == ""):
+                    del doc.paragraphs[j]
+                # Insert new bullets
+                for idx, bullet in enumerate(new_bullets):
+                    doc.paragraphs.insert(j + idx, doc.add_paragraph(bullet))
                 break
 
-    replace_paragraphs("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2], 2)
-    replace_paragraphs("EXTUENT", experience[2:5], 3)
-    replace_paragraphs("FRAPPE", experience[5:10], 5)
+    replace_bullets("UNIVERSITY OF ILLINOIS URBANA-CHAMPAIGN", experience[0:2])
+    replace_bullets("EXTUENT", experience[2:5])
+    replace_bullets("FRAPPE", experience[5:10])
 
     for para in doc.paragraphs:
         if "Core Competencies" in para.text:
